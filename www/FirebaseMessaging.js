@@ -52,5 +52,10 @@ module.exports = {
 
             exec(resolve, reject, PLUGIN_NAME, "requestPermission", [options || {}]);
         });
+    },
+    createChannel: function(channel) {
+        return new Promise(function (resolve,reject) {
+            exec(resolve, reject, PLUGIN_NAME, "createChannel", [channel]);
+        });
     }
 };

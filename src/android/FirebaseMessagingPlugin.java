@@ -1,11 +1,18 @@
 package by.chemerisuk.cordova.firebase;
 
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.content.Intent;
+import android.media.AudioAttributes;
+import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.content.SharedPreferences;
-import androidx.core.app.NotificationManagerCompat;
+import android.support.v4.app.NotificationCompat;
+import android.support.v4.app.NotificationManagerCompat;
 
 import by.chemerisuk.cordova.support.CordovaMethod;
 import by.chemerisuk.cordova.support.ReflectiveCordovaPlugin;
@@ -157,6 +164,71 @@ public class FirebaseMessagingPlugin extends ReflectiveCordovaPlugin {
             callbackContext.success();
         } else {
             callbackContext.error("Notifications permission is not granted");
+        }
+    }
+
+    @CordovaMethod
+    private void createChannel(JSONObject channel, CallbackContext callbackContext) throws JSONException {
+        // only call on Android O and above
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            try {
+                final NotificationManager notificationManager = (NotificationManager) cordova.getActivity()
+                        .getSystemService(Context.NOTIFICATION_SERVICE);
+
+                String packageName = cordova.getActivity().getApplicationContext().getPackageName();
+                NotificationChannel mChannel = new NotificationChannel(channel.getString("id"),
+                        channel.optString("description", ""),
+                        channel.optInt("importance", NotificationManager.IMPORTANCE_DEFAULT));
+
+                int lightColor = channel.optInt("lightColor", -1);
+                if (lightColor != -1) {
+                    mChannel.setLightColor(lightColor);
+                }
+
+                int visibility = channel.optInt("visibility", NotificationCompat.VISIBILITY_PUBLIC);
+                mChannel.setLockscreenVisibility(visibility);
+
+                boolean badge = channel.optBoolean("badge", true);
+                mChannel.setShowBadge(badge);
+
+                String sound = channel.optString("sound", "default");
+                AudioAttributes audioAttributes = new AudioAttributes.Builder()
+                        .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                        .setUsage(AudioAttributes.USAGE_NOTIFICATION_RINGTONE).build();
+
+                if (sound.equals("ringtone")) {
+                    mChannel.setSound(android.provider.Settings.System.DEFAULT_RINGTONE_URI, audioAttributes);
+                } else if (sound != null && sound.isEmpty()) {
+                    // Disable sound for this notification channel if an empty string is passed.
+                    // https://stackoverflow.com/a/47144981/6194193
+                    mChannel.setSound(null, null);
+                } else if (sound != null && !sound.contentEquals("default")) {
+                    Uri soundUri = Uri.parse(ContentResolver.SCHEME_ANDROID_RESOURCE + "://" + packageName + "/raw/" + sound);
+                    mChannel.setSound(soundUri, audioAttributes);
+                } else {
+                    mChannel.setSound(android.provider.Settings.System.DEFAULT_NOTIFICATION_URI, audioAttributes);
+                }
+
+                // If vibration settings is an array set vibration pattern, else set enable
+                // vibration.
+                JSONArray pattern = channel.optJSONArray("vibration");
+                if (pattern != null) {
+                    int patternLength = pattern.length();
+                    long[] patternArray = new long[patternLength];
+                    for (int i = 0; i < patternLength; i++) {
+                        patternArray[i] = pattern.optLong(i);
+                    }
+                    mChannel.setVibrationPattern(patternArray);
+                } else {
+                    boolean vibrate = channel.optBoolean("vibration", true);
+                    mChannel.enableVibration(vibrate);
+                }
+
+                notificationManager.createNotificationChannel(mChannel);
+                callbackContext.success();
+            } catch(Exception e) {
+                callbackContext.error(e.getMessage());
+            }
         }
     }
 

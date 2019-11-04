@@ -43,7 +43,8 @@ public class FirebaseMessagingPluginService extends FirebaseMessagingService {
         try {
             ApplicationInfo ai = getPackageManager().getApplicationInfo(getApplicationContext().getPackageName(), PackageManager.GET_META_DATA);
             this.defaultNotificationIcon = ai.metaData.getInt(NOTIFICATION_ICON_KEY, ai.icon);
-            this.defaultNotificationColor = ContextCompat.getColor(this, ai.metaData.getInt(NOTIFICATION_COLOR_KEY));
+            Log.d(TAG, Integer.toString(ai.metaData.getInt(NOTIFICATION_COLOR_KEY, 1337)));
+//            this.defaultNotificationColor = ContextCompat.getColor(this, ai.metaData.getInt(NOTIFICATION_COLOR_KEY, 1));
         } catch (PackageManager.NameNotFoundException e) {
             Log.e(TAG, "Failed to load meta-data", e);
         } catch(Resources.NotFoundException e) {
@@ -82,7 +83,7 @@ public class FirebaseMessagingPluginService extends FirebaseMessagingService {
         builder.setContentText(notification.getBody());
         builder.setGroup(notification.getTag());
         builder.setSmallIcon(this.defaultNotificationIcon);
-        builder.setColor(this.defaultNotificationColor);
+//        builder.setColor(this.defaultNotificationColor);
         // must set sound and priority in order to display alert
         builder.setSound(getNotificationSound(notification.getSound()));
         builder.setPriority(1);
